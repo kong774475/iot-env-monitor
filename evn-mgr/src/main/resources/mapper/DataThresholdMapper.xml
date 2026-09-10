@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xjteam4.envMgr.mapper.DataThresholdMapper">
+
+    <resultMap id="dataThresholdMap" type="com.xjteam4.envMgr.domain.DataThresholdEntity">
+        <result column="th_id" property="thId" />
+        <result column="th_type" property="thType" />
+        <result column="th_min" property="thMin" />
+        <result column="th_max" property="thMax" />
+    </resultMap>
+
+    <sql id="baseSql">
+        SELECT
+            data_threshold.th_id, data_threshold.th_type, data_threshold.th_min, data_threshold.th_max
+        FROM data_threshold
+        WHERE 1 = 1 
+    </sql>
+
+    <sql id="condition">
+        <if test="dataThreshold.thId != null">
+             and data_threshold.th_id = #{dataThreshold.thId}
+        </if>
+        <if test="dataThreshold.thType != null">
+             and data_threshold.th_type = #{dataThreshold.thType}
+        </if>
+        <if test="dataThreshold.thMin != null">
+             and data_threshold.th_min = #{dataThreshold.thMin}
+        </if>
+        <if test="dataThreshold.thMax != null">
+             and data_threshold.th_max = #{dataThreshold.thMax}
+        </if>
+    </sql>
+
+    <select id="queryById" resultMap="dataThresholdMap">
+        <include refid="baseSql"></include>
+        AND data_threshold.th_id = #{thId}
+    </select>
+
+    <select id="queryAllByLimit" resultMap="dataThresholdMap">
+        <include refid="baseSql"></include>
+        <include refid="condition"></include>
+        order by th_id desc
+        limit #{pageable.offset}, #{pageable.pageSize}
+    </select>
+
+    <select id="count" resultType="java.lang.Long">
+        select count(1)
+        from (
+        <include refid="baseSql"></include>
+        <include refid="condition"></include> ) t
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="thId">
+        insert into data_threshold(th_type, th_min, th_max)
+        values(#{thType}, #{thMin}, #{thMax})
+    </insert>
+
+    <update id="update">
+        update data_threshold
+        <set>
+            <if test="thType != null">
+                th_type = #{thType},
+            </if>
+            <if test="thMin != null">
+                th_min = #{thMin},
+            </if>
+            <if test="thMax != null">
+                th_max = #{thMax},
+            </if>
+        </set>
+        WHERE th_id = #{thId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM data_threshold WHERE th_id = #{thId}
+    </delete>
+</mapper>
+

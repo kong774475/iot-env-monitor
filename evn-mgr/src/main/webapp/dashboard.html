@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>环境监测移动端Dashboard</title>
+    <script src="./js/echarts.5.5.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        html {
+            font-size: 16px;
+            background: #f0f9f4;
+        }
+        body {
+            padding: 12px;
+            padding-bottom: 40px;
+        }
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 10px;
+        }
+        .page-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-align: center;
+            padding: 10px 0;
+            color: #166534;
+        }
+        .header-btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        .refresh-btn {
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25);
+            transition: all 0.2s ease;
+        }
+        .refresh-btn:hover {
+            background: #16a34a;
+        }
+        .log-btn {
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 12px;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25);
+            transition: all 0.2s ease;
+        }
+        .log-btn:hover {
+            background: #16a34a;
+        }
+        /* 指标卡片容器 */
+        .card-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .index-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 10px rgba(34, 197, 94, 0.08);
+            border: 1px solid #dcfce7;
+        }
+        .card-label {
+            font-size: 0.8rem;
+            color: #4d7c0f;
+            margin-bottom: 6px;
+        }
+        .card-value {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #15803d;
+        }
+        .card-unit {
+            font-size: 0.9rem;
+            color: #65a30d;
+            margin-left: 4px;
+        }
+        .warn-text {
+            color: #ef4444 !important;
+        }
+        /* 图表模块 */
+        .chart-block {
+            background: #fff;
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 10px rgba(34, 197, 94, 0.08);
+            border: 1px solid #dcfce7;
+        }
+        .chart-title {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #166534;
+            margin-bottom: 10px;
+        }
+        .chart-box {
+            width: 100%;
+            height: 220px;
+        }
+        .chart-row-two {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .chart-row-two .chart-box {
+            height: 200px;
+        }
+        /* 日志弹窗样式 */
+        .mask {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            z-index: 99;
+        }
+        .log-dialog {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 400px;
+            background: #fff;
+            border-radius: 14px;
+            padding: 18px;
+            border: 1px solid #dcfce7;
+            box-shadow: 0 4px 20px rgba(34, 197, 94, 0.12);
+        }
+        .dialog-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            color: #166534;
+        }
+        .close-dialog {
+            color: #86efac;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+        .form-item {
+            margin-bottom: 12px;
+        }
+        .form-item label {
+            display: block;
+            font-size: 0.85rem;
+            color: #166534;
+            margin-bottom: 4px;
+        }
+        .form-item input, .form-item select {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            background: #f0fdf4;
+            outline: none;
+        }
+        .form-item input:focus, .form-item select:focus {
+            border-color: #22c55e;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top:16px;
+        }
+        .btn-group button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+        .search-log {
+            background: #22c55e;
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25);
+        }
+        .search-log:hover {
+            background: #16a34a;
+        }
+        .reset-log {
+            background: #ecfccb;
+            color: #166534;
+        }
+        .reset-log:hover {
+            background: #d9f99d;
+        }
+        .log-count {
+            font-size: 0.85rem;
+            color: #15803d;
+            margin-bottom: 8px;
+            padding: 6px 0;
+            border-bottom: 1px solid #dcfce7;
+        }
+        .log-list-box {
+            max-height: 240px;
+            overflow-y: auto;
+            margin-top:12px;
+            border-top:1px solid #dcfce7;
+            padding-top:10px;
+        }
+        .log-item {
+            padding:10px 0;
+            border-bottom:1px solid #f0fdf4;
+            font-size:0.82rem;
+            color: #22543d;
+        }
+    </style>
+</head>
+<body>
+<!-- 顶部标题+刷新+日志按钮 -->
+<div class="page-header">
+    <div class="page-title">环境监测实时数据</div>
+    <div class="header-btn-group">
+        <button class="refresh-btn" id="refreshPageBtn">刷新页面</button>
+        <button class="log-btn" id="openLogDialog">操作日志查询</button>
+    </div>
+</div>
+
+<!-- 顶部核心指标卡片 -->
+<div class="card-row">
+    <div class="index-card">
+        <div class="card-label">实时温度</div>
+        <div class="card-value"><span id="tempVal">--</span><span class="card-unit">℃</span></div>
+    </div>
+    <div class="index-card">
+        <div class="card-label">实时湿度</div>
+        <div class="card-value"><span id="humVal">--</span><span class="card-unit">%RH</span></div>
+    </div>
+    <div class="index-card">
+        <div class="card-label">实时光照</div>
+        <div class="card-value"><span id="lightVal">--</span><span class="card-unit">lux</span></div>
+    </div>
+    <div class="index-card">
+        <div class="card-label">异常数据条数</div>
+        <div class="card-value warn-text"><span id="warnCount">--</span><span class="card-unit">条</span></div>
+    </div>
+</div>
+
+<!-- 24小时温湿度光照趋势折线图 -->
+<div class="chart-block">
+    <div class="chart-title">24小时环境参数趋势</div>
+    <div class="chart-box" id="lineChart"></div>
+</div>
+
+<!-- 两栏图表：异常占比饼图 + 设备数据对比柱状图 -->
+<div class="chart-row-two">
+    <div class="chart-block">
+        <div class="chart-title">数据阈值状态分布</div>
+        <div class="chart-box" id="pieChart"></div>
+    </div>
+    <div class="chart-block">
+        <div class="chart-title">各设备均值对比</div>
+        <div class="chart-box" id="barChart"></div>
+    </div>
+</div>
+
+<!-- 操作日志弹窗遮罩 -->
+<div class="mask" id="logMask">
+    <div class="log-dialog">
+        <div class="dialog-title">
+            <span>操作日志筛选查询</span>
+            <span class="close-dialog" id="closeDialog">×</span>
+        </div>
+        <div class="form-item">
+            <label>开始时间</label>
+            <input type="datetime-local" id="startTime">
+        </div>
+        <div class="form-item">
+            <label>结束时间</label>
+            <input type="datetime-local" id="endTime">
+        </div>
+        <div class="form-item">
+            <label>操作类型</label>
+            <select id="operType">
+                <option value="">全部类型</option>
+                <option value="0">登录</option>
+                <option value="1">退出</option>
+                <option value="2">数据修改</option>
+            </select>
+        </div>
+        <div class="form-item">
+            <label>操作人员昵称</label>
+            <input type="text" id="nickName" placeholder="模糊搜索昵称">
+        </div>
+        <div class="form-item">
+            <label>展示条数</label>
+            <input type="number" id="limitNum" value="10" min="1" max="100">
+        </div>
+        <div class="btn-group">
+            <button class="search-log" id="searchLogBtn">查询日志</button>
+            <button class="reset-log" id="resetLogBtn">重置条件</button>
+        </div>
+        <div class="log-count" id="logCount"></div>
+        <div class="log-list-box" id="logListBox"></div>
+    </div>
+</div>
+
+<script>
+    // 全局缓存echarts实例，仅初始化一次
+    let lineChart, pieChart, barChart;
+    // 全局定时器标识，防止重复创建
+    let refreshTimer = null;
+
+    // 统一刷新所有数据，挂载window给鸿蒙ArkTS主动调用兜底
+    function refreshAllData() {
+        loadCurrentData();
+        load24HourData();
+        loadPieData();
+        loadDevAvgTempData();
+        console.log('执行一轮定时数据刷新');
+    }
+    window.refreshAllData = refreshAllData;
+
+    // 一次性初始化所有图表实例
+    function initEcharts() {
+        lineChart = echarts.init(document.getElementById('lineChart'));
+        pieChart = echarts.init(document.getElementById('pieChart'));
+        barChart = echarts.init(document.getElementById('barChart'));
+    }
+
+    // 开启唯一10秒轮询，先清除旧定时器避免叠加
+    function startTimer() {
+        if (refreshTimer) clearInterval(refreshTimer);
+        refreshTimer = setInterval(() => {
+            refreshAllData();
+        }, 10000);
+    }
+
+    // 页面可见性监听，鸿蒙切回页面自动刷新重启定时器
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            refreshAllData();
+            startTimer();
+        }
+    });
+
+    // 窗口尺寸自适应重绘图表
+    window.addEventListener('resize', () => {
+        lineChart?.resize();
+        pieChart?.resize();
+        barChart?.resize();
+    });
+
+    /**
+     * 加载实时指标卡片数据
+     */
+    function loadCurrentData() {
+        fetch(`./envData/queryLastReportData?_t=${Date.now()}`)
+            .then(res => res.json())
+            .then(res => {
+                document.getElementById('tempVal').innerText = res.content.currTemp;
+                document.getElementById('humVal').innerText = res.content.currHumi;
+                document.getElementById('lightVal').innerText = res.content.currLight;
+                document.getElementById('warnCount').innerText = res.content.exDataCount;
+            })
+            .catch(err => console.error('实时指标接口异常：', err));
+    }
+
+    /**
+     * 24小时趋势折线图（复用已有实例，仅更新配置）
+     */
+    function load24HourData() {
+        fetch(`./envData/queryLast24Data?_t=${Date.now()}`)
+            .then(res => res.json())
+            .then(res => {
+                const lineOption = {
+                    tooltip: { trigger: 'axis' },
+                    legend: { data: ['温度℃', '湿度%RH', '光照lux'], left: 100, textStyle: { fontSize: 10, color: '#166534' } },
+                    grid: { left: 35, right: 15, top: 40, bottom: 30 },
+                    xAxis: {
+                        type: 'category',
+                        data: res.content.timeList,
+                        axisLine: { lineStyle: { color: '#bbf7d0' } },
+                        axisLabel: { color: '#15803d' }
+                    },
+                    yAxis: [
+                        {
+                            name: '温/湿度',
+                            type: 'value',
+                            axisLine: { lineStyle: { color: '#bbf7d0' } },
+                            axisLabel: { color: '#15803d' },
+                            splitLine: { lineStyle: { color: '#f0fdf4' } }
+                        },
+                        {
+                            name: '光照',
+                            type: 'value',
+                            scale: true,
+                            axisLine: { lineStyle: { color: '#bbf7d0' } },
+                            axisLabel: { color: '#15803d' },
+                            splitLine: { lineStyle: { color: '#f0fdf4' } }
+                        }
+                    ],
+                    series: [
+                        { name: '温度℃', type: 'line', data: res.content.tempList, color: '#65a30d' },
+                        { name: '湿度%RH', type: 'line', data: res.content.humiList, color: '#22c55e' },
+                        { name: '光照lux', type: 'line', yAxisIndex: 1, data: res.content.lightList, color: '#84cc16' }
+                    ]
+                };
+                lineChart.setOption(lineOption);
+            })
+            .catch(err => console.error('24小时折线图接口异常：', err));
+    }
+
+    /**
+     * 正常/异常占比饼图
+     */
+    function loadPieData() {
+        fetch(`./envData/queryDataCount?_t=${Date.now()}`)
+            .then(res => res.json())
+            .then(res => {
+                const pieOption = {
+                    tooltip: { trigger: 'item' },
+                    series: [{
+                        type: 'pie',
+                        radius: ['30%', '65%'],
+                        data: res.content,
+                        color: ['#22c55e', '#ef4444']
+                    }]
+                };
+                pieChart.setOption(pieOption);
+            })
+            .catch(err => console.error('饼图接口异常：', err));
+    }
+
+    /**
+     * 各设备平均温度柱状图
+     */
+    function loadDevAvgTempData() {
+        fetch(`./envData/queryAvgTemp?_t=${Date.now()}`)
+            .then(res => res.json())
+            .then(res => {
+                const barOption = {
+                    tooltip: { trigger: 'axis' },
+                    grid: { left: 40, right: 10, bottom: 50 },
+                    xAxis: {
+                        type: 'category',
+                        data: res.content.devNames,
+                        axisLabel: { rotate: 30, fontSize: 9, color: '#15803d' },
+                        axisLine: { lineStyle: { color: '#bbf7d0' } }
+                    },
+                    yAxis: {
+                        name: '平均温度℃',
+                        axisLine: { lineStyle: { color: '#bbf7d0' } },
+                        axisLabel: { color: '#15803d' },
+                        splitLine: { lineStyle: { color: '#f0fdf4' } }
+                    },
+                    series: [{
+                        type: 'bar',
+                        data: res.content.tempList,
+                        itemStyle: {
+                            color: '#22c55e',
+                            borderRadius: 6
+                        }
+                    }]
+                };
+                barChart.setOption(barOption);
+            })
+            .catch(err => console.error('设备柱状图接口异常：', err));
+    }
+
+    // 页面加载入口
+    window.onload = function () {
+        initEcharts();
+        refreshAllData();
+        startTimer();
+    }
+
+    // 页面刷新按钮
+    const refreshBtn = document.getElementById('refreshPageBtn');
+    refreshBtn.addEventListener('click', () => {
+        location.reload();
+    });
+
+    // 弹窗DOM元素
+    const mask = document.getElementById('logMask');
+    const openBtn = document.getElementById('openLogDialog');
+    const closeBtn = document.getElementById('closeDialog');
+    const searchBtn = document.getElementById('searchLogBtn');
+    const resetBtn = document.getElementById('resetLogBtn');
+    const logListBox = document.getElementById('logListBox');
+    const logCount = document.getElementById('logCount');
+
+    // 打开弹窗
+    openBtn.addEventListener('click', () => {
+        mask.style.display = 'block';
+        logCount.innerHTML = '';
+    });
+
+    // 关闭弹窗
+    closeBtn.addEventListener('click', () => {
+        mask.style.display = 'none';
+        logListBox.innerHTML = '';
+        logCount.innerHTML = '';
+    });
+
+    // 重置查询条件
+    resetBtn.addEventListener('click', () => {
+        document.getElementById('startTime').value = '';
+        document.getElementById('endTime').value = '';
+        document.getElementById('operType').value = '';
+        document.getElementById('nickName').value = '';
+        document.getElementById('limitNum').value = '10';
+        logListBox.innerHTML = '';
+        logCount.innerHTML = '';
+    });
+
+    // 查询日志接口
+    searchBtn.addEventListener('click', function () {
+        let startTimeRaw = document.getElementById('startTime').value;
+        let endTimeRaw = document.getElementById('endTime').value;
+        let operType = document.getElementById('operType').value;
+        let nickName = document.getElementById('nickName').value;
+        let limitNum = document.getElementById('limitNum').value;
+
+        let startTime = startTimeRaw ? startTimeRaw.split('T')[0] + ' 00:00:00' : '';
+        let endTime = endTimeRaw ? endTimeRaw.split('T')[0] + ' 23:59:59' : '';
+
+        let params = new URLSearchParams();
+        if (startTime) params.append('startTime', startTime);
+        if (endTime) params.append('endTime', endTime);
+        if (operType) params.append('operType', operType);
+        if (nickName) params.append('nickName', nickName);
+        params.append('limitNum', limitNum);
+
+        const baseUrl = "/envMgr/userOperLog/queryLogByTimeLimit";
+        const fullUrl = `${baseUrl}?${params.toString()}&_t=${Date.now()}`;
+
+        fetch(fullUrl, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+        })
+            .then(res => {
+                if (!res.ok) throw new Error("接口请求异常");
+                return res.json();
+            })
+            .then(res => {
+                logListBox.innerHTML = '';
+                let totalCount = res.code === 1 && Array.isArray(res.content) ? res.content.length : 0;
+                logCount.innerHTML = totalCount > 0
+                    ? `共查询到 <span style="color:#22c55e; font-weight:600">${totalCount}</span> 条日志记录`
+                    : '未查询到符合条件的日志记录';
+
+                if (res.code !== 1 || !res.content || res.content.length === 0) {
+                    logListBox.innerHTML = '<div style="color:#65a30d;text-align:center">暂无匹配日志数据</div>';
+                    return;
+                }
+
+                res.content.forEach(item => {
+                    let typeText = '未知';
+                    if (item.operType === 0) typeText = '登录';
+                    if (item.operType === 1) typeText = '退出';
+                    if (item.operType === 2) typeText = '修改操作';
+                    let html = `
+                    <div class="log-item">
+                        <div>操作人：${item.sysUser.nickName}(${item.sysUser.userName}) | ${typeText}</div>
+                        <div>描述：${item.operDesc}</div>
+                        <div>时间：${item.operTime}</div>
+                    </div>
+                `;
+                    logListBox.innerHTML += html;
+                })
+            })
+            .catch(err => {
+                logCount.innerHTML = '<span style="color:#ef4444">查询失败：接口请求异常</span>';
+                logListBox.innerHTML = '<div style="color:#ef4444;text-align:center">接口请求失败，请检查后端服务</div>';
+                console.error("日志查询错误：", err);
+            })
+    })
+</script>
+</body>
+</html>

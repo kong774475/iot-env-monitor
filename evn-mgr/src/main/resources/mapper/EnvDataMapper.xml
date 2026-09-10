@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xjteam4.envMgr.mapper.EnvDataMapper">
+
+    <resultMap id="envDataMap" type="com.xjteam4.envMgr.domain.EnvDataEntity">
+        <result column="ed_id" property="edId" />
+        <result column="dev_id" property="devId" />
+        <result column="dev_name" property="devName" />
+        <result column="dev_posi" property="devPosi" />
+        <result column="dev_val" property="devVal" />
+        <result column="val_type" property="valType" />
+        <result column="collect_time" property="collectTime" />
+        <result column="th_flag" property="thFlag" />
+    </resultMap>
+
+    <sql id="baseSql">
+        SELECT
+        env_data.ed_id, env_data.dev_id, env_data.dev_name, env_data.dev_posi, env_data.dev_val, env_data.val_type, env_data.collect_time, env_data.th_flag
+        FROM env_data
+        WHERE 1 = 1
+    </sql>
+
+    <sql id="condition">
+        <if test="envData.edId != null">
+            and env_data.ed_id = #{envData.edId}
+        </if>
+        <if test="envData.devId != null">
+            and env_data.dev_id = #{envData.devId}
+        </if>
+        <if test="envData.devName != null and envData.devName != ''">
+            and env_data.dev_name LIKE concat('%', #{envData.devName}, '%')
+        </if>
+        <if test="envData.devPosi != null and envData.devPosi != ''">
+            and env_data.dev_posi LIKE concat('%', #{envData.devPosi}, '%')
+        </if>
+        <if test="envData.devVal != null">
+            and env_data.dev_val = #{envData.devVal}
+        </if>
+        <if test="envData.valType != null">
+            and env_data.val_type = #{envData.valType}
+        </if>
+        <if test="envData.collectTime != null and envData.collectTime != ''">
+            and env_data.collect_time LIKE concat('%', #{envData.collectTime}, '%')
+        </if>
+        <if test="envData.thFlag != null">
+            and env_data.th_flag = #{envData.thFlag}
+        </if>
+    </sql>
+
+    <select id="queryById" resultMap="envDataMap">
+        <include refid="baseSql"></include>
+        AND env_data.ed_id = #{edId}
+    </select>
+
+    <select id="queryAllByLimit" resultMap="envDataMap">
+        <include refid="baseSql"></include>
+        <include refid="condition"></include>
+        order by ed_id desc
+        limit #{pageable.offset}, #{pageable.pageSize}
+    </select>
+
+    <select id="count" resultType="java.lang.Long">
+        select count(1)
+        from (
+        <include refid="baseSql"></include>
+        <include refid="condition"></include> ) t
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="edId">
+        insert into env_data(dev_id, dev_name, dev_posi, dev_val, val_type, collect_time, th_flag)
+        values(#{devId}, #{devName}, #{devPosi}, #{devVal}, #{valType}, CURRENT_TIMESTAMP,
+        (select ifnull(
+        (select 0 from data_threshold t
+        where t.th_type = #{valType}
+        and #{devVal} between t.th_min and t.th_max), 1)))
+    </insert>
+
+    <update id="update">
+        update env_data
+        <set>
+            <if test="devId != null">
+                dev_id = #{devId},
+            </if>
+            <if test="devName != null and devName != ''">
+                dev_name = #{devName},
+            </if>
+            <if test="devPosi != null and devPosi != ''">
+                dev_posi = #{devPosi},
+            </if>
+            <if test="devVal != null">
+                dev_val = #{devVal},
+            </if>
+            <if test="valType != null">
+                val_type = #{valType},
+            </if>
+            <if test="collectTime != null and collectTime != ''">
+                collect_time = #{collectTime},
+            </if>
+            <if test="thFlag != null">
+                th_flag = #{thFlag},
+            </if>
+        </set>
+        WHERE ed_id = #{edId}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM env_data WHERE ed_id = #{edId}
+    </delete>
+
+    <!--
+    查询每个设备最后上报的数据信息
+     */
+    List<EnvDataEntity> queryDevInfos();
+    -->
+    <select id="queryDevInfos" resultType="com.xjteam4.envMgr.module.vo.EnvDataInfoVO">
+        SELECT
+            e.dev_id devId, e.dev_name devName, e.dev_posi devPosi, e.collect_time collectTime,
+            SUM(CASE WHEN e.val_type = 1 THEN e.dev_val ELSE 0 END) temp,
+            SUM(CASE WHEN e.val_type = 2 THEN e.dev_val ELSE 0 END) humi,
+            SUM(CASE WHEN e.val_type = 3 THEN e.dev_val ELSE 0 END) light
+        FROM env_data e
+        WHERE
+            (e.dev_id, e.dev_name, e.dev_posi, e.collect_time)
+                IN
+            (
+                SELECT e.dev_id, e.dev_name, e.dev_posi, MAX(e.collect_time)
+                FROM env_data e
+                GROUP BY e.dev_id, e.dev_name, e.dev_posi -- 分组取每个设备最新时间
+            )
+        GROUP BY e.dev_id, e.dev_name, e.dev_posi, e.collect_time;
+    </select>
+
+    <!--
+    根据数据类型，获取最近时间的数据指标，1温度 2 湿度 3光照
+     */
+    Double queryLastData(Integer type);-->
+    <select id="queryLastData" resultType="java.lang.Double">
+        select
+            e.dev_val
+        from env_data e
+        where e.val_type = #{type} -- 所有的指定类型数据
+        order by collect_time DESC -- 按最新时间排序
+            limit 0, 1
+    </select>
+
+    <!--
+    异常数据条数
+     */
+    Integer queryEeceptionDataCount();
+    -->
+    <select id="queryEeceptionDataCount" resultType="java.lang.Integer">
+        select count(1)
+        from env_data e
+        where e.th_flag = 1 -- 异常数据
+    </select>
+
+    <!--
+    * 查询最近24条数据
+     */
+    List<Map<String, Object>> queryLast24Data();
+    -->
+    <select id="queryLast24Data" resultType="java.util.Map">
+        select
+            k.time, k.temp, k.humi, k.light
+        from(
+                select
+                    t.time,
+                    round(sum(case when t.val_type=1 then t.val else 0 end),2) temp,
+                    round(sum(case when t.val_type=2 then t.val else 0 end),2) humi,
+                    round(sum(case when t.val_type=3 then t.val else 0 end),2) light
+                from (
+                         select
+                             avg(e.dev_val) val, e.val_type, concat(DATE_FORMAT(e.collect_time, '%m-%d %H'),':00') time
+                         from env_data e
+                         group by e.val_type, concat(DATE_FORMAT(e.collect_time, '%m-%d %H'),':00'), e.val_type) t
+                group by t.time
+                order by t.time desc
+                    LIMIT 24) k
+        order by k.time asc
+    </select>
+
+    <!--
+    */
+    Map<String, Object> queryDataCount();
+    -->
+    <select id="queryDataCount" resultType="java.util.Map">
+        select count(1) value,
+	        case e.th_flag when 0 THEN '正常' ELSE '异常' end name
+        from env_data e
+        group by e.th_flag;
+    </select>
+
+    <!--
+    获取设备的平均温度取值
+     */
+    List<Map<String, Object>> queryAvgTemp()
+    -->
+    <select id="queryAvgTemp" resultType="java.util.Map">
+        SELECT
+            round(AVG(e.dev_val),2) avg_temp, e.dev_name
+        from env_data e
+        where e.val_type = 1
+          and e.collect_time between DATE_SUB(NOW(), INTERVAL 72 HOUR) and NOW()
+        group by e.dev_name
+    </select>
+
+
+</mapper>

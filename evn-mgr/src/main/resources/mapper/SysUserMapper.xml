@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xjteam4.envMgr.mapper.SysUserMapper">
+
+    <resultMap id="sysUserMap" type="com.xjteam4.envMgr.domain.SysUserEntity">
+        <result column="user_id" property="userId" />
+        <result column="user_name" property="userName" />
+        <result column="user_pwd" property="userPwd" />
+        <result column="nick_name" property="nickName" />
+        <result column="user_phone" property="userPhone" />
+    </resultMap>
+
+    <sql id="baseSql">
+        SELECT
+            sys_user.user_id, sys_user.user_name, sys_user.user_pwd, sys_user.nick_name, sys_user.user_phone
+        FROM sys_user
+        <!--WHERE sys_user.del_mark = 1 -->
+    </sql>
+
+    <sql id="condition">
+        <if test="sysUser.userId != null">
+             and sys_user.user_id = #{sysUser.userId}
+        </if>
+        <if test="sysUser.userName != null and sysUser.userName != ''">
+             and sys_user.user_name LIKE concat('%', #{sysUser.userName}, '%')
+        </if>
+        <if test="sysUser.userPwd != null and sysUser.userPwd != ''">
+             and sys_user.user_pwd LIKE concat('%', #{sysUser.userPwd}, '%')
+        </if>
+        <if test="sysUser.nickName != null and sysUser.nickName != ''">
+             and sys_user.nick_name LIKE concat('%', #{sysUser.nickName}, '%')
+        </if>
+        <if test="sysUser.userPhone != null and sysUser.userPhone != ''">
+             and sys_user.user_phone LIKE concat('%', #{sysUser.userPhone}, '%')
+        </if>
+    </sql>
+
+    <select id="queryById" resultMap="sysUserMap">
+        <include refid="baseSql"></include>
+        WHERE sys_user.user_id = #{userId}
+    </select>
+
+    <select id="queryAllByLimit" resultMap="sysUserMap">
+        <include refid="baseSql"></include>
+        <include refid="condition"></include>
+        order by user_id desc
+        limit #{pageable.offset}, #{pageable.pageSize}
+    </select>
+
+    <select id="count" resultType="java.lang.Long">
+        select count(1)
+        from (
+        <include refid="baseSql"></include>
+        <include refid="condition"></include> ) t
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="userId">
+        insert into sys_user(user_name, user_pwd, nick_name, user_phone)
+        values(#{userName}, #{userPwd}, #{nickName}, #{userPhone})
+    </insert>
+
+    <update id="update">
+        update sys_user
+        <set>
+            <if test="userName != null and userName != ''">
+                user_name = #{userName},
+            </if>
+            <if test="userPwd != null and userPwd != ''">
+                user_pwd = #{userPwd},
+            </if>
+            <if test="nickName != null and nickName != ''">
+                nick_name = #{nickName},
+            </if>
+            <if test="userPhone != null and userPhone != ''">
+                user_phone = #{userPhone},
+            </if>
+        </set>
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="deleteById">
+        <!-- UPDATE sys_user SET del_mark = 0 WHERE user_id = #{userId}-->
+        DELETE FROM sys_user WHERE user_id = #{userId}
+
+    </update>
+
+    <!--
+    SysUserEnity login(SysUserEnity sysUser)
+    -->
+    <select id="login" resultMap="sysUserMap">
+        <include refid="baseSql"></include>
+        <!--AND sys_user.user_name = #{userName}老师版本-->
+        <!--AND sys_user.user_pwd = #{userPwd}-->
+        <!-- WHERE sys_user.user_name = #{userName} OR sys_user.user_phone = #{userPhone}) -->
+        <!--AND sys_user.user_pwd = #{userPwd} 自己的第一版-->
+        <where>
+            <if test="userName != null and userName != ''">
+                sys_user.user_name = #{userName}
+            </if>
+            <if test="userPhone != null and userPhone != ''">
+                <if test="userName != null and userName != ''">OR</if>
+                sys_user.user_phone = #{userPhone}
+            </if>
+            AND sys_user.user_pwd = #{userPwd}
+        </where>
+    </select>
+
+    <!--
+    查询用户是否存在
+     */
+    SysUserEntity queryByUserPhone(SysUserEntity sysUser);
+    -->
+    <select id="queryByUserPhone" resultMap="sysUserMap">
+        SELECT
+        u.user_id, u.user_name, u.user_phone, u.nick_name
+        from sys_user u
+        where u.user_id != #{userId} and u.user_phone = #{userPhone}
+    </select>
+
+    <!--
+    * 修改密码
+    int updatePwd(@Param("userId") Integer userId, @Param("oldPwd") String oldPwd, @Param("newPwd") String newPwd);
+    -->
+    <update id="updatePwd">
+            update sys_user set user_pwd=#{newPwd} where user_id=#{userId} and user_pwd = #{oldPwd}
+    </update>
+</mapper>
+
