@@ -1,0 +1,15 @@
+config WIFI_SSID
+    string
+    prompt "Config WIFI SSID."
+    default "HomeAI_1"
+    depends on SAMPLE_CUSTOM_MQTT
+    help
+        This option means input WIFI SSID Sample.
+
+config WIFI_PWD
+    string
+    prompt "Config WIFI Password."
+    default "12345678"
+    depends on SAMPLE_CUSTOM_MQTT
+    help
+        This option means input WIFI PWD Sample.
